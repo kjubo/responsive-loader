@@ -33,7 +33,7 @@ type Config = {
   disable: ?boolean,
 };
 
-const getOutputAndPublicPath = (fileName:string, {outputPath: configOutputPath, publicPath: configPublicPath}:Config) => {
+const getOutputAndPublicPath = (fileName: string, { outputPath: configOutputPath, publicPath: configPublicPath }: Config) => {
   let outputPath = fileName;
 
   if (configOutputPath) {
@@ -132,22 +132,22 @@ module.exports = function loader(content: Buffer) {
       .replace(/\[width\]/ig, '100')
       .replace(/\[height\]/ig, '100');
 
-    const {outputPath, publicPath} = getOutputAndPublicPath(fileName, config);
+    const { outputPath, publicPath } = getOutputAndPublicPath(fileName, config);
 
     loaderContext.emitFile(outputPath, content);
 
     return loaderCallback(null, 'module.exports = {srcSet:' + publicPath + ',images:[{path:' + publicPath + ',width:100,height:100}],src: ' + publicPath + ',toString:function(){return ' + publicPath + '}};');
   }
 
-  const createFile = ({data, width, height}) => {
+  const createFile = ({ data, width, height }) => {
     const fileName = loaderUtils.interpolateName(loaderContext, name, {
       context: outputContext,
       content: data
     })
-    .replace(/\[width\]/ig, width)
-    .replace(/\[height\]/ig, height);
+      .replace(/\[width\]/ig, width)
+      .replace(/\[height\]/ig, height);
 
-    const {outputPath, publicPath} = getOutputAndPublicPath(fileName, config);
+    const { outputPath, publicPath } = getOutputAndPublicPath(fileName, config);
 
     loaderContext.emitFile(outputPath, data);
 
@@ -159,7 +159,7 @@ module.exports = function loader(content: Buffer) {
     };
   };
 
-  const createPlaceholder = ({data}: {data: Buffer}) => {
+  const createPlaceholder = ({ data }: { data: Buffer }) => {
     const placeholder = data.toString('base64');
     return JSON.stringify('data:' + (mime ? mime + ';' : '') + 'base64,' + placeholder);
   };
@@ -201,15 +201,25 @@ module.exports = function loader(content: Buffer) {
           : {
             files: results.map(createFile)
           }
-         );
+        );
     })
-    .then(({files, placeholder}) => {
+    .then(({ files, placeholder }) => {
       const srcset = files.map(f => f.src).join('+","+');
 
       const images = files.map(f => '{path:' + f.path + ',width:' + f.width + ',height:' + f.height + '}').join(',');
 
       const firstImage = files[0];
 
+      loaderCallback(null, `module.exports = (other) => require('react').createElement(
+        'img',
+        Object.assign({
+          src: ${firstImage.path},
+          srcSet: ${srcset},
+          width: ${firstImage.width},
+          height: ${firstImage.height},
+        }, other));`
+      );
+      /*
       loaderCallback(null, 'module.exports = {' +
           'srcSet:' + srcset + ',' +
           'images:[' + images + '],' +
@@ -219,6 +229,7 @@ module.exports = function loader(content: Buffer) {
           'width:' + firstImage.width + ',' +
           'height:' + firstImage.height +
       '};');
+      */
     })
     .catch(err => loaderCallback(err));
 };
